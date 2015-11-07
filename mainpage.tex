@@ -1,0 +1,519 @@
+Random Forest Using R: Step by Step Tutorial
+November 3, 2015 by Ram Prajapat
+%===============================================================%
+
+http://dni-institute.in/blogs/random-forest-using-r-step-by-step-tutorial/
+
+
+Random Forest: Overview
+
+Random Forest is an ensemble learning  based classification and regression technique. It is one of the commonly used predictive modelling and machine learning technique. Before understanding random forest algorithm, it is recommended to understand about decision tree algorithm & applications. A non-technical description of decision tree.
+
+A simple explanation of why is it called “Random Forest”.
+Infographic Random Forest v2In a normal decision tree, one decision tree is built and in a random forest algorithm number of decision trees are built during the process. A vote from each of the decision trees is considered in deciding the final class of a case or an object, this is called ensemble process. This is a democratic process.Since , many decision trees are built and used in a process of Random Forest algorithm, it is called a forest.
+
+Now, why is it “random”? A data frame (or SAS dataset) has two dimensions - observation (or rows) and variables (or columns). For a building a decision tree, samples of a data frame are selected with replacement along with selecting a subset of variables for each of the decision tree. Both sampling of data frame and selection of subset of the variables are done randomly, so first word “random”is arrived.
+
+Key advantages of using Random Forest
+
+Reduce chances of over-fitting
+Higher model performance or accuracy
+Random Forest uses Gini Index based impurity measures for building decision tree. Gini Index is also used for building Classification and Regression Tree (CART). In earlier blogs we have explained working of CART Decision Tree and a worked out example of Gini Index calculation.
+
+Random Forest algorithm can be used for both classification and regression applications.
+
+In this tutorial, we will only focus random forest using R for binary classification example. In the next blog, we will leverage Random Forest for regression problems.
+
+Random Forest using R
+
+Random Forest algorithm is built in randomForest package of R and same name function allows us to use the Random Forest in R.
+
+
+# Load library
+library(randomForest)
+# Help on ramdonForest package and function
+library(help=randomForest)
+help(randomForest)
+1
+2
+3
+4
+5
+# Load library
+library(randomForest)
+# Help on ramdonForest package and function
+library(help=randomForest)
+help(randomForest)
+Some of the commonly used parameters of randomForest functions are
+
+x : Random Forest Formula
+
+data: Input data frame
+
+ntree: Number of decision trees to be grown
+
+replace: Takes True and False and indicates whether to take sample with/without replacement
+
+sampsize: Sample size to be drawn from the input data for growing decision tree
+
+importance: Whether independent variable importance in random forest be assessed
+
+proximity: Whether to calculate proximity measures between rows of a data frame
+
+ 
+
+As mentioned earlier Random Forest can be used for Classification and Regression problems. Based on type of target /response variable, the relevant decision trees will be built.
+
+Target Variable                                                               Decision Tree Class
+
+Factor                                                                                        Classification
+
+Numeric/Integer                                                                     Regression
+
+Not available                                                                            Unsupervised
+
+In this blog, Random Forest is used for building a cross sell model for a bank marketing scenario. Before building Random Forest based model, we need to understand the business context, data sample and variables.
+
+Business Scenario and dataset
+
+A marketing department of a bank runs various marketing campaigns for cross-selling products, improving customer retention and customer services.
+
+In this example, the bank wanted to cross-sell term deposit product to its customers.Contacting all customers is costly and does not create good customer experience. So, the bank wanted to build a predictive model which will identify customers who are more likely to respond to term deport cross sell campaign.
+
+We will use sample Marketing Data sample for building Random Forest based model using R.
+
+Read data
+
+
+## Read data
+termCrosssell<-read.csv(file="termCrosssell.csv",header = T)
+## Explore data frame
+names(termCrosssell)
+##  [1] "age"            "job"            "marital"        "education"     
+##  [5] "default"        "housing"        "loan"           "contact"       
+##  [9] "month"          "day_of_week"    "duration"       "campaign"      
+## [13] "pdays"          "previous"       "poutcome"       "emp.var.rate"  
+## [17] "cons.price.idx" "cons.conf.idx"  "euribor3m"      "nr.employed"   
+## [21] "y"
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+## Read data
+termCrosssell<-read.csv(file="termCrosssell.csv",header = T)
+## Explore data frame
+names(termCrosssell)
+##  [1] "age"            "job"            "marital"        "education"     
+##  [5] "default"        "housing"        "loan"           "contact"       
+##  [9] "month"          "day_of_week"    "duration"       "campaign"      
+## [13] "pdays"          "previous"       "poutcome"       "emp.var.rate"  
+## [17] "cons.price.idx" "cons.conf.idx"  "euribor3m"      "nr.employed"   
+## [21] "y"
+Input dataset has 20 independent variables and a target variable. The target variable y is binary.
+
+
+table(termCrosssell$y)/nrow(termCrosssell)
+## 
+##        no       yes 
+## 0.8873458 0.1126542
+1
+2
+3
+4
+table(termCrosssell$y)/nrow(termCrosssell)
+## 
+##        no       yes 
+## 0.8873458 0.1126542
+11% of the observations has target variable “yes” and remaining 89% observations take value “no”.
+
+Now, we will split the data sample into development and validation samples.
+
+
+sample.ind <- sample(2, 
+                     nrow(termCrosssell),
+                     replace = T,
+                     prob = c(0.6,0.4))
+cross.sell.dev <- termCrosssell[sample.ind==1,]
+cross.sell.val <- termCrosssell[sample.ind==2,]
+
+table(cross.sell.dev$y)/nrow(cross.sell.dev)
+## 
+##        no       yes 
+## 0.8859289 0.1140711
+
+
+table(cross.sell.val$y)/nrow(cross.sell.val)
+## 
+## no yes 
+## 0.8894524 0.1105476
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+sample.ind <- sample(2, 
+                     nrow(termCrosssell),
+                     replace = T,
+                     prob = c(0.6,0.4))
+cross.sell.dev <- termCrosssell[sample.ind==1,]
+cross.sell.val <- termCrosssell[sample.ind==2,]
+ 
+table(cross.sell.dev$y)/nrow(cross.sell.dev)
+## 
+##        no       yes 
+## 0.8859289 0.1140711
+ 
+ 
+table(cross.sell.val$y)/nrow(cross.sell.val)
+## 
+## no yes 
+## 0.8894524 0.1105476
+Both development and validation samples have similar target variable distribution. This is just a sample validation.
+
+If target variable is factor, classification decision tree is built. We can check the type of response variable.
+
+
+class(cross.sell.dev$y)
+
+## [1] "factor"
+1
+2
+3
+class(cross.sell.dev$y)
+ 
+## [1] "factor"
+Class of target or response variable is factor, so a classification Random Forest will be built. The current data frame has a list of independent variables, so we can make it formula and then pass as a parameter value for randomForest.
+
+Make Formula
+
+
+varNames <- names(cross.sell.dev)
+# Exclude ID or Response variable
+varNames <- varNames[!varNames %in% c("y")]
+
+# add + sign between exploratory variables
+varNames1 <- paste(varNames, collapse = "+")
+
+# Add response variable and convert to a formula object
+rf.form <- as.formula(paste("y", varNames1, sep = " ~ "))
+1
+2
+3
+4
+5
+6
+7
+8
+9
+varNames <- names(cross.sell.dev)
+# Exclude ID or Response variable
+varNames <- varNames[!varNames %in% c("y")]
+ 
+# add + sign between exploratory variables
+varNames1 <- paste(varNames, collapse = "+")
+ 
+# Add response variable and convert to a formula object
+rf.form <- as.formula(paste("y", varNames1, sep = " ~ "))
+Building Random Forest using R
+
+Now, we have a sample data and formula for building Random Forest model. Let’s build 500 decision trees using Random Forest.
+
+
+cross.sell.rf <- randomForest(rf.form,
+                              cross.sell.dev,
+                              ntree=500,
+                              importance=T)
+
+plot(cross.sell.rf)
+1
+2
+3
+4
+5
+6
+cross.sell.rf <- randomForest(rf.form,
+                              cross.sell.dev,
+                              ntree=500,
+                              importance=T)
+ 
+plot(cross.sell.rf)
+Random Forest Error Rate
+
+500 decision trees or a forest has been built using the Random Forest algorithm based learning. We can plot the error rate across decision trees. The plot seems to indicate that after 100 decision trees, there is not a significant reduction in error rate.
+
+Variable importance plot is also a useful tool and can be plotted using varImpPlot function. Top 5 variables are selected and plotted based on Model Accuracy and Gini value. We can also get a table with decreasing order of importance based on a measure (1 for model accuracy and 2 node impurity)
+
+
+# Variable Importance Plot
+varImpPlot(cross.sell.rf,
+           sort = T,
+           main="Variable Importance",
+           n.var=5)
+1
+2
+3
+4
+5
+# Variable Importance Plot
+varImpPlot(cross.sell.rf,
+           sort = T,
+           main="Variable Importance",
+           n.var=5)
+random forest variable importance
+
+
+# Variable Importance Table
+var.imp <- data.frame(importance(cross.sell.rf,
+           type=2))
+# make row names as columns
+var.imp$Variables <- row.names(var.imp)
+var.imp[order(var.imp$MeanDecreaseGini,decreasing = T),]
+##                MeanDecreaseGini      Variables
+## duration             1435.30741       duration
+## euribor3m             511.25934      euribor3m
+## age                   366.42477            age
+## job                   316.16851            job
+## nr.employed           288.84357    nr.employed
+## education             221.98129      education
+## day_of_week           207.70090    day_of_week
+## pdays                 183.81116          pdays
+## campaign              176.34274       campaign
+## poutcome              145.60094       poutcome
+## month                 143.67009          month
+## cons.conf.idx         124.65672  cons.conf.idx
+## emp.var.rate          104.73467   emp.var.rate
+## cons.price.idx        100.65364 cons.price.idx
+## marital                95.76891        marital
+## housing                78.29705        housing
+## previous               63.87996       previous
+## loan                   58.70528           loan
+## contact                44.74415        contact
+## default                34.55498        default
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+# Variable Importance Table
+var.imp <- data.frame(importance(cross.sell.rf,
+           type=2))
+# make row names as columns
+var.imp$Variables <- row.names(var.imp)
+var.imp[order(var.imp$MeanDecreaseGini,decreasing = T),]
+##                MeanDecreaseGini      Variables
+## duration             1435.30741       duration
+## euribor3m             511.25934      euribor3m
+## age                   366.42477            age
+## job                   316.16851            job
+## nr.employed           288.84357    nr.employed
+## education             221.98129      education
+## day_of_week           207.70090    day_of_week
+## pdays                 183.81116          pdays
+## campaign              176.34274       campaign
+## poutcome              145.60094       poutcome
+## month                 143.67009          month
+## cons.conf.idx         124.65672  cons.conf.idx
+## emp.var.rate          104.73467   emp.var.rate
+## cons.price.idx        100.65364 cons.price.idx
+## marital                95.76891        marital
+## housing                78.29705        housing
+## previous               63.87996       previous
+## loan                   58.70528           loan
+## contact                44.74415        contact
+## default                34.55498        default
+Based on Random Forest variable importance, the variables could be selected for any other predictive modelling techniques or machine learning.
+
+Now, we want to measure the accuracy of the Random Forest model. Some of the other model performance statistics are
+
+KS
+Lift Chart
+ROC curve
+You may be interested to read more on model performance statistics blog.
+
+Predict Response Variable Value using Random Forest
+
+Generic predict function can be used for predicting response variable using Random Forest object.
+
+
+# Predicting response variable
+cross.sell.dev$predicted.response <- predict(cross.sell.rf ,cross.sell.dev)
+1
+2
+# Predicting response variable
+cross.sell.dev$predicted.response <- predict(cross.sell.rf ,cross.sell.dev)
+Confusion Matrix
+
+confusionMatrix function from caret package can be used for creating confusion matrix based on actual response variable and predicted value.
+
+
+# Load Library or packages
+library(e1071)
+library(caret)
+## Loading required package: lattice
+## Loading required package: ggplot2
+# Create Confusion Matrix
+confusionMatrix(data=cross.sell.dev$predicted.response,
+                reference=cross.sell.dev$y,
+                positive='yes')
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    no   yes
+##        no  21816    42
+##        yes     0  2767
+##                                           
+##                Accuracy : 0.9983          
+##                  95% CI : (0.9977, 0.9988)
+##     No Information Rate : 0.8859          
+##     P-Value [Acc > NIR] : < 2.2e-16
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+# Load Library or packages
+library(e1071)
+library(caret)
+## Loading required package: lattice
+## Loading required package: ggplot2
+# Create Confusion Matrix
+confusionMatrix(data=cross.sell.dev$predicted.response,
+                reference=cross.sell.dev$y,
+                positive='yes')
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    no   yes
+##        no  21816    42
+##        yes     0  2767
+##                                           
+##                Accuracy : 0.9983          
+##                  95% CI : (0.9977, 0.9988)
+##     No Information Rate : 0.8859          
+##     P-Value [Acc > NIR] : < 2.2e-16
+It has accuracy of 99.81%, which is fantastic. Now we can predict response for the validation sample and calculate model accuracy for the sample.
+
+
+# Predicting response variable
+cross.sell.val$predicted.response <- predict(cross.sell.rf ,cross.sell.val)
+
+# Create Confusion Matrix
+confusionMatrix(data=cross.sell.val$predicted.response,
+                reference=cross.sell.val$y,
+                positive='yes')
+
+
+## Confusion Matrix and Statistics
+## 
+## Reference
+## Prediction no yes
+## no 14196 860
+## yes 536 971
+## 
+## Accuracy : 0.9157 
+## 95% CI : (0.9114, 0.9199)
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+# Predicting response variable
+cross.sell.val$predicted.response <- predict(cross.sell.rf ,cross.sell.val)
+ 
+# Create Confusion Matrix
+confusionMatrix(data=cross.sell.val$predicted.response,
+                reference=cross.sell.val$y,
+                positive='yes')
+ 
+ 
+## Confusion Matrix and Statistics
+## 
+## Reference
+## Prediction no yes
+## no 14196 860
+## yes 536 971
+## 
+## Accuracy : 0.9157 
+## 95% CI : (0.9114, 0.9199)
+Accuracy level has dropped to 91.4% but still significantly higher.
+
+We had used SVM algorithm for building the model. If you want to read Support Vector Machine for building a cross sell model on the same data sample.
+
+References
+
+http://cogns.northwestern.edu/cbmg/LiawAndWiener2002.pdf
+http://trevorstephens.com/post/73770963794/titanic-getting-started-with-r-part-5-random
+ 
+
+Categories Cross Sell Modeling, Customer Analytics, Decision Tree, R, R for Data Science, Random Forest
+Tags r randomforest tutorial example, random forest algorithm, random forest example, random forest in r, random forest in r example, random forest in r for classification, random forest in r tutorial, random forest in r variable importance, random forest regression in r, random forest variable importance plot, random forest variable selection, variable importance random forest r
+Post navigation
+Over 60% posts do not get any like on Facebook
