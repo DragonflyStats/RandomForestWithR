@@ -1,0 +1,31 @@
+Random forests is a notion of the general technique of random decision forests[1][2] that are an ensemble learning method for classification, regression and other tasks, that operate by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes (classification) or mean prediction (regression) of the individual trees. Random decision forests correct for decision trees' habit of overfitting to their training set.[3]:587–588
+
+The algorithm for inducing Breiman's random forest was developed by Leo Breiman[4] and Adele Cutler,[5] and "Random Forests" is their trademark.[6] The method combines Breiman's "bagging" idea and the random selection of features, introduced independently by Ho[1][2] and Amit and Geman[7] in order to construct a collection of decision trees with controlled variance.
+
+The selection of a random subset of features is an example of the random subspace method, which, in Ho's formulation, is a way to implement the "stochastic discrimination" approach to classification proposed by Eugene Kleinberg.[8][9][10]
+
+Contents  [hide] 
+1	History
+2	Algorithm
+2.1	Preliminaries: decision tree learning
+2.2	Tree bagging
+2.3	From bagging to random forests
+2.4	Extensions
+3	Properties
+3.1	Variable importance
+3.2	Relationship to nearest neighbors
+4	Unsupervised learning with random forests
+5	Variants
+6	See also
+7	References
+8	External links
+History[edit]
+The general method of random decision forests was first proposed by Ho in 1995,[1] who established that forests of trees splitting with oblique hyperplanes, if randomly restricted to be sensitive to only selected feature dimensions, can gain accuracy as they grow without suffering from overtraining. A subsequent work along the same lines [2] concluded that other splitting methods, as long as they are randomly forced to be insensitive to some feature dimensions, behave similarly. Note that this observation of a more complex classifier (a larger forest) getting more accurate nearly monotonically is in sharp contrast to the common belief that the complexity of a classifier can only grow to a certain level before accuracy being hurt by overfitting. The explanation of the forest method's resistance to overtraining can be found in Kleinberg's theory of stochastic discrimination.[8][9][10]
+
+The early development of Breiman's notion of random forests was influenced by the work of Amit and Geman[7] who introduced the idea of searching over a random subset of the available decisions when splitting a node, in the context of growing a single tree. The idea of random subspace selection from Ho[2] was also influential in the design of random forests. In this method a forest of trees is grown, and variation among the trees is introduced by projecting the training data into a randomly chosen subspace before fitting each tree. Finally, the idea of randomized node optimization, where the decision at each node is selected by a randomized procedure, rather than a deterministic optimization was first introduced by Dietterich.[11]
+
+The introduction of random forests proper was first made in a paper by Leo Breiman.[4] This paper describes a method of building a forest of uncorrelated trees using a CART like procedure, combined with randomized node optimization and bagging. In addition, this paper combines several ingredients, some previously known and some novel, which form the basis of the modern practice of random forests, in particular:
+
+Using out-of-bag error as an estimate of the generalization error.
+Measuring variable importance through permutation.
+The report also offers the first theoretical result for random forests in the form of a bound on the generalization error which depends on the strength of the trees in the forest and their correlation.
