@@ -1,9 +1,12 @@
+\section{Random Forest}
+
 Random forests is a notion of the general technique of random decision forests[1][2] that are an ensemble learning method for classification, regression and other tasks, that operate by constructing a multitude of decision trees at training time and outputting the class that is the mode of the classes (classification) or mean prediction (regression) of the individual trees. Random decision forests correct for decision trees' habit of overfitting to their training set.[3]:587–588
 
 The algorithm for inducing Breiman's random forest was developed by Leo Breiman[4] and Adele Cutler,[5] and "Random Forests" is their trademark.[6] The method combines Breiman's "bagging" idea and the random selection of features, introduced independently by Ho[1][2] and Amit and Geman[7] in order to construct a collection of decision trees with controlled variance.
 
 The selection of a random subset of features is an example of the random subspace method, which, in Ho's formulation, is a way to implement the "stochastic discrimination" approach to classification proposed by Eugene Kleinberg.[8][9][10]
 
+%========================================================================================%
 Contents  [hide] 
 1	History
 2	Algorithm
@@ -20,7 +23,13 @@ Contents  [hide]
 7	References
 8	External links
 History[edit]
+
+%========================================================================================%
+
 The general method of random decision forests was first proposed by Ho in 1995,[1] who established that forests of trees splitting with oblique hyperplanes, if randomly restricted to be sensitive to only selected feature dimensions, can gain accuracy as they grow without suffering from overtraining. A subsequent work along the same lines [2] concluded that other splitting methods, as long as they are randomly forced to be insensitive to some feature dimensions, behave similarly. Note that this observation of a more complex classifier (a larger forest) getting more accurate nearly monotonically is in sharp contrast to the common belief that the complexity of a classifier can only grow to a certain level before accuracy being hurt by overfitting. The explanation of the forest method's resistance to overtraining can be found in Kleinberg's theory of stochastic discrimination.[8][9][10]
+
+
+%========================================================================================%
 
 The early development of Breiman's notion of random forests was influenced by the work of Amit and Geman[7] who introduced the idea of searching over a random subset of the available decisions when splitting a node, in the context of growing a single tree. The idea of random subspace selection from Ho[2] was also influential in the design of random forests. In this method a forest of trees is grown, and variation among the trees is introduced by projecting the training data into a randomly chosen subspace before fitting each tree. Finally, the idea of randomized node optimization, where the decision at each node is selected by a randomized procedure, rather than a deterministic optimization was first introduced by Dietterich.[11]
 
@@ -29,3 +38,37 @@ The introduction of random forests proper was first made in a paper by Leo Breim
 Using out-of-bag error as an estimate of the generalization error.
 Measuring variable importance through permutation.
 The report also offers the first theoretical result for random forests in the form of a bound on the generalization error which depends on the strength of the trees in the forest and their correlation.
+
+
+%========================================================================================%
+\subsection{Variable importance}
+Random forests can be used to rank the importance of variables in a regression or classification problem in a natural way. The following technique was described in Breiman's original paper[4] and is implemented in the R package randomForest.[5]
+
+The first step in measuring the variable importance in a data set \mathcal{D}_n =\{(X_i, Y_i)\}_{i=1}^n is to fit a random forest to the data. During the fitting process the out-of-bag error for each data point is recorded and averaged over the forest (errors on an independent test set can be substituted if bagging is not used during training).
+
+To measure the importance of the j-th feature after training, the values of the j-th feature are permuted among the training data and the out-of-bag error is again computed on this perturbed data set. The importance score for the j-th feature is computed by averaging the difference in out-of-bag error before and after the permutation over all trees. The score is normalized by the standard deviation of these differences.
+
+Features which produce large values for this score are ranked as more important than features which produce small values.
+
+This method of determining variable importance has some drawbacks. For data including categorical variables with different number of levels, random forests are biased in favor of those attributes with more levels. Methods such as partial permutations[15][16] and growing unbiased trees[17] can be used to solve the problem. If the data contain groups of correlated features of similar relevance for the output, then smaller groups are favored over larger groups.[18]
+
+\subsection{Relationship to nearest neighbors}
+A relationship between random forests and the k-nearest neighbor algorithm (k-NN) was pointed out by Lin and Jeon in 2002.[19] It turns out that both can be viewed as so-called weighted neighborhoods schemes. These are models built from a training set \{(x_i, y_i)\}_{i=1}^n that make predictions \hat{y} for new points x' by looking at the "neighborhood" of the point, formalized by a weight function W:
+
+\[\hat{y} = \sum_{i=1}^n W(x_i, x') \, y_i.\]
+Here, W(x_i, x') is the non-negative weight of the i'th training point relative to the new point x'. For any particular x', the weights must sum to one. Weight functions are given as follows:
+
+In k-NN, the weights are W(x_i, x') = \frac{1}{k} if xi is one of the k points closest to x', and zero otherwise.
+In a tree, W(x_i, x') = \frac{1}{k'} if xi is one of the k' points in the same leaf as x', and zero otherwise.
+Since a forest averages the predictions of a set of m trees with individual weight functions W_j, its predictions are
+
+\[\hat{y} = \frac{1}{m}\sum_{j=1}^m\sum_{i=1}^n W_{j}(x_i, x') \, y_i = \sum_{i=1}^n\left(\frac{1}{m}\sum_{j=1}^m W_{j}(x_i, x')\right) \, y_i.\]
+This shows that the whole forest is again a weighted neighborhood scheme, with weights that average those of the individual trees. The neighbors of x' in this interpretation are the points x_i which fall in the same leaf as x' in at least one tree of the forest. In this way, the neighborhood of x' depends in a complex way on the structure of the trees, and thus on the structure of the training set. Lin and Jeon show that the shape of the neighborhood used by a random forest adapts to the local importance of each feature.[19]
+
+\subsection{Unsupervised learning with random forests}
+As part of their construction, RF predictors naturally lead to a dissimilarity measure between the observations. One can also define an RF dissimilarity measure between unlabeled data: the idea is to construct an RF predictor that distinguishes the “observed” data from suitably generated synthetic data.[4][20] The observed data are the original unlabeled data and the synthetic data are drawn from a reference distribution. An RF dissimilarity can be attractive because it handles mixed variable types well, is invariant to monotonic transformations of the input variables, and is robust to outlying observations. The RF dissimilarity easily deals with a large number of semi-continuous variables due to its intrinsic variable selection; for example, the "Addcl 1" RF dissimilarity weighs the contribution of each variable according to how dependent it is on other variables. The RF dissimilarity has been used in a variety of applications, e.g. to find clusters of patients based on tissue marker data.[21]
+
+\subsection{Variants}
+Instead of decision trees, linear models have been proposed and evaluated as base estimators in random forests, in particular multinomial logistic regression and naive Bayes classifiers.[22][23]
+
+Libraries[edit]
