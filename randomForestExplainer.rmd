@@ -1,27 +1,32 @@
-Understanding random forests with randomForestExplainer
+## Understanding random forests with randomForestExplainer
 Aleksandra Paluszyńska
-Introduction
-Data and forest
-Distribution of minimal depth
-Various variable importance measures
-Multi-way importance plot
-Compare measures using ggpairs
-Compare different rankings
-Variable interactions
-Conditional minimal depth
-Prediction of the forest on a grid
-Explain the forest
-Introduction
+
+1. Introduction
+2. Data and forest
+3.Distribution of minimal depth
+4. Various variable importance measures
+5. Multi-way importance plot
+6. Compare measures using ggpairs
+7. Compare different rankings
+8. Variable interactions
+9. Conditional minimal depth
+10. Prediction of the forest on a grid
+11. Explain the forest
+
+### 1. Introduction
 This vignette demonstrates how to use the randomForestExplainer package. We will use the Boston from package MASS. In fact, the development of randomForestExplainer was motivated by problems that include lots of predictors and not many observations. However, as they usually require growing large forests and are computationally intensive, we use the small Boston data set here and encourage you to follow our analysis of such large data set concerning glioblastoma here: initial vignette.
 
 We will use the following packages:
-
-library(randomForest)
+```{r}  
+  library(randomForest)
 # devtools::install_github("MI2DataLab/randomForestExplainer")
 library(randomForestExplainer)
-Data and forest
+```
+
+### 2. Data and forest
 The data set Boston has the following structure:
 
+```{R}`  
 data(Boston, package = "MASS")
 Boston$chas <- as.logical(Boston$chas)
 str(Boston)
@@ -40,13 +45,16 @@ str(Boston)
 ##  $ black  : num  397 397 393 395 397 ...
 ##  $ lstat  : num  4.98 9.14 4.03 2.94 5.33 ...
 ##  $ medv   : num  24 21.6 34.7 33.4 36.2 28.7 22.9 27.1 16.5 18.9 ...
-We use the randomForest::randomForest function to train a forest of B=500 trees (default value of the mtry parameter of this function), with option localImp = TRUE. The forest is supposed to predict the median price of an apartment medv based on its characteristics.
+```
 
+We use the ``randomForest::randomForest`` function to train a forest of B=500 trees (default value of the mtry parameter of this function), with option localImp = TRUE. The forest is supposed to predict the median price of an apartment medv based on its characteristics.
+```{R}
 set.seed(2017)
 forest <- randomForest(medv ~ ., data = Boston, localImp = TRUE)
+```
 The prediction accuracy of our forest can be summarized as follows:
-
-forest
+<pre><code>  
+  forest
 ## 
 ## Call:
 ##  randomForest(formula = medv ~ ., data = Boston, localImp = TRUE) 
@@ -56,11 +64,12 @@ forest
 ## 
 ##           Mean of squared residuals: 9.700833
 ##                     % Var explained: 88.51
+</code></pre>
 Now, we will use all the functions of randomForestExplainer in turn and comment on the obtained results.
 
-Distribution of minimal depth
+## Distribution of minimal depth
 To obtain the distribution of minimal depth we pass our forest to the function min_depth_distribution and store the result, which contains the following columns (we save this and load it from memory as it takes a while):
-
+```{r}`  
 # min_depth_frame <- min_depth_distribution(forest)
 # save(min_depth_frame, file = "min_depth_frame.rda")
 load("min_depth_frame.rda")
@@ -76,35 +85,37 @@ head(min_depth_frame, n = 10)
 ## 8     1      nox             2
 ## 9     1  ptratio             3
 ## 10    1      rad             6
+```
 Next, we pass it to the function plot_min_depth_distribution and under default settings obtain obtain a plot of the distribution of minimal depth for top ten variables according to mean minimal depth calculated using top trees (mean_sample = "top_trees"). We could also pass our forest directly to the plotting function but if we want to make more than one plot of the minimal depth distribution is more efficient to pass the min_depth_frame to the plotting function so that it will not be calculated again for each plot (this works similarly for other plotting functions of randomForestExplainer).
 
+```{r}`
 # plot_min_depth_distribution(forest) # gives the same result as below but takes longer
 plot_min_depth_distribution(min_depth_frame)
-
+```
 The function plot_min_depth_distribution offers three possibilities when it comes to calculating the mean minimal depth, which differ in he way they treat missing values that appear when a variable is not used for splitting in a tree. They can be described as follows:
+  
+*  mean_sample = "all_trees" (filling missing value): the minimal depth of a variable in a tree that does not use it for splitting is equal to the mean depth of trees. Note that the depth of a tree is equal to the length of the longest path from root to leave in this tree. This equals the maximum depth of a variable in this tree plus one, as leaves are by definition not split by any variable.
 
-mean_sample = "all_trees" (filling missing value): the minimal depth of a variable in a tree that does not use it for splitting is equal to the mean depth of trees. Note that the depth of a tree is equal to the length of the longest path from root to leave in this tree. This equals the maximum depth of a variable in this tree plus one, as leaves are by definition not split by any variable.
+* mean_sample = "top_trees" (restricting the sample): to calculate the mean minimal depth only B~ out of B (number of trees) observations are considered, where B~ is equal to the maximum number of trees in which any variable was used for splitting. Remaining missing values for variables that were used for splitting less than B~ times are filled in as in mean_sample = "all_trees".
 
-mean_sample = "top_trees" (restricting the sample): to calculate the mean minimal depth only B~ out of B (number of trees) observations are considered, where B~ is equal to the maximum number of trees in which any variable was used for splitting. Remaining missing values for variables that were used for splitting less than B~ times are filled in as in mean_sample = "all_trees".
-
-mean_sample = "relevant_trees" (ignoring missing values): mean minimal depth is calculated using only non-missing values.
+* mean_sample = "relevant_trees" (ignoring missing values): mean minimal depth is calculated using only non-missing values.
 
 Note that the x-axis ranges from zero trees to the maximum number of trees in which any variable was used for splitting (B~) which is in this case equal to 500 and is reached by all variables plotted.
 
 The ordering of variables in our plot by their mean minimal depth seems quite accurate when we look at the distribution of minimal depth, though one could argue that for example indus should be ranked higherthan dis as the latter is never used for splitting at the root. Usually we would obtain different orderings when changing the mean_sample option but this is not the case if variables are used for splitting in all trees as this option only influences how and whether missing values are treated. The default option, "top_trees", penalizes missing values and this penalization makes the interpretation of the values less obvious – to address that we can calculate the mean minimal depth only using non-missing observations (mean_sample = "relevant_trees"). For forests with many variables with a lot of missing observations we should always consider adding the min_no_of_trees option so that only variables used for splitting in at least the declared number of trees will be considered for the plot. This allows us to avoid selecting variables that have been by chance used for splitting e.g., only once but at the root (their mean would be equal to 0). However, in our case we can simply increase the  k parameter to plot all trees:
-
+```{r}  
 plot_min_depth_distribution(min_depth_frame, mean_sample = "relevant_trees", k = 15)
-
+```
 Clearly, using only relevant trees for calculating the mean does not change it for variables that have no missing values. Also, in this case the change does not influence the ordering of variables, but of course this usually not the case in more complex examples.
 
 Regardless of the exact parameters used in plot_min_depth_distribution, looking at the whole distribution of minimal depth offers a lot more insight into the role that a predictor plays in a forest in contrast to looking only at the mean, especially as it can be calculated in more than one way. Additionally, the function allows us to specify the maximum number of variables plotted k, whether the values of mean minimal depth should be scaled to the [0,1] interval (mean_scale, logical), the number of digits to round the mean to for display (mean_round) and the title of the plot (main).
 
-Various variable importance measures
+### Various variable importance measures
 To further explore variable importance measures we pass our forest to measure_importance function and get the following data frame (we save and load it from memory to save time):
-
-# importance_frame <- measure_importance(forest)
-# save(importance_frame, file = "importance_frame.rda")
-load("importance_frame.rda")
+  
+  # importance_frame <- measure_importance(forest)
+  # save(importance_frame, file = "importance_frame.rda")
+  load("importance_frame.rda")
 importance_frame
 ##    variable mean_min_depth no_of_nodes mse_increase node_purity_increase
 ## 1       age       3.308000        8936    3.7695582            1144.6959
@@ -135,8 +146,8 @@ importance_frame
 ## 12         500           11  1.000000e+00
 ## 13         482            6  1.000000e+00
 It contains 13 rows, each corresponding to a predictor, and 8 columns of which one stores the variable names and the rest store the variable importance measures of a variable Xj:
-
-accuracy_decrease (classification) – mean decrease of prediction accuracy after Xj is permuted,
+  
+  accuracy_decrease (classification) – mean decrease of prediction accuracy after Xj is permuted,
 
 gini_decrease (classification) – mean decrease in the Gini index of node impurity (i.e. increase of node purity) by splits on Xj,
 
@@ -153,7 +164,7 @@ no_of_nodes – total number of nodes that use Xj for splitting (it is usually e
 times_a_root – total number of trees in which Xj is used for splitting the root node (i.e., the whole sample is divided into two based on the value of Xj),
 
 p_value – p-value for the one-sided binomial test using the following distribution:
-Bin(no_of_nodes, P(node splits on Xj)),
+  Bin(no_of_nodes, P(node splits on Xj)),
 where we calculate the probability of split on Xj as if Xj was uniformly drawn from the r candidate variables
 P(node splits on Xj)=P(Xj is a candidate)⋅P(Xj is selected)=rp⋅1r=1p.
 This test tells us whether the observed number of successes (number of nodes in which Xj was used for splitting) exceeds the theoretical number of successes if they were random (i.e. following the binomial distribution given above).
@@ -182,25 +193,32 @@ plot_importance_ggpairs(importance_frame)
 
 We can see that all depicted measures are highly correlated (of course the correlation of any measure with mean minimal depth is negative as the latter is lowest for best variables), but some less than others. Moreover, regardless of which measures we compare, there always seem to be two points that stand out and these most likely correspond to lstat and rm (to now for sure we could just examine the importance_frame).
 
-Compare different rankings
+##Compare different rankings
 In addition to scatter plots and correlation coefficients, the ggpairs plot also depicts density estimate for each importance measure – all of which are in this case very skewed. An attempt to eliminate this feature by plotting rankings instead of raw measures is implemented in the function plot_importance_rankings that also includes the fitted LOESS curve in each plot.
 
+```{R}`
 # plot_importance_rankings(forest) # gives the same result as below but takes longer
 plot_importance_rankings(importance_frame)
+``
 
-The above density estimates show that skewness was eliminated for all of our importance measures (this is not always the case, e.g., when ties in rankings are frequent, and this is likely for discrete importance measures such as times_a_root, then the distribution of the ranking will also be skewed).
 
-When comparing the rankings in the above plot we can see that two pairs of measures almost exactly agree in their rankings of variables: mean_min_depth vs. mse_increase and mse_increase vs. node_purity_increase. In applications where there are many variables, the LOESS curve may be the main takeaway from this plot (if points fill in the whole plotting area and this is likely if the distributions of measures are close to uniform).
+The above density estimates show that skewness was eliminated for all of our importance measures (this is not always 
+the case, e.g., when ties in rankings are frequent, and this is likely for discrete importance measures such as times_a_root, then the distribution of the ranking will also be skewed).
 
-Variable interactions
+When comparing the rankings in the above plot we can see that two pairs of measures almost exactly 
+agree in their rankings of variables: mean_min_depth vs. mse_increase and mse_increase vs. node_purity_increase. 
+In applications where there are many variables, the LOESS curve may be the main takeaway from this plot (if points
+fill in the whole plotting area and this is likely if the distributions of measures are close to uniform).
+
+## Variable interactions
 Conditional minimal depth
 After selecting a set of most important variables we can investigate interactions with respect to them, i.e. splits appearing in maximal subtrees with respect to one of the variables selected. To extract the names of 5 most important variables according to both the mean minimal depth and number of trees in which a variable appeared, we pass our importance_frame to the function important_variables as follows:
-
-# (vars <- important_variables(forest, k = 5, measures = c("mean_min_depth", "no_of_trees"))) # gives the same result as below but takes longer
-(vars <- important_variables(importance_frame, k = 5, measures = c("mean_min_depth", "no_of_trees")))
+  
+  # (vars <- important_variables(forest, k = 5, measures = c("mean_min_depth", "no_of_trees"))) # gives the same result as below but takes longer
+  (vars <- important_variables(importance_frame, k = 5, measures = c("mean_min_depth", "no_of_trees")))
 ## [1] "lstat" "rm"    "crim"  "nox"   "dis"
 We pass the result together with or forest to the min_depth_interactions function to obtain a data frame containing information on mean conditional minimal depth of variables with respect to each element of vars (missing values are filled analogously as for unconditional minimal depth, in one of three ways specified by mean_sample). If we would not specify the vars argument then the vector of conditioning variables would be by default obtained using important_variables(measure_importance(forest)).
-
+```{r}`
 # interactions_frame <- min_depth_interactions(forest, vars)
 # save(interactions_frame, file = "interactions_frame.rda")
 load("interactions_frame.rda")
@@ -219,33 +237,37 @@ head(interactions_frame[order(interactions_frame$occurrences, decreasing = TRUE)
 ## 23                 2.600
 ## 33                 1.288
 ## 8                  3.512
+```
 Then, we pass our interactions_frame to the plotting function plot_min_depth_interactions and obtain the following:
-
-# plot_min_depth_interactions(forest) # calculates the interactions_frame for default settings so may give different results than the function below depending on our settings and takes more time
-plot_min_depth_interactions(interactions_frame)
+  
+  # plot_min_depth_interactions(forest) # calculates the interactions_frame for default settings so may give different results than the function below depending on our settings and takes more time
+  plot_min_depth_interactions(interactions_frame)
 
 Note that the interactions are ordered by decreasing number of occurrences – the most frequent one, lstat:rm, is also the one with minimal mean conditional minimal depth. Remarkably, the unconditional mean minimal depth of  rm in the forest is almost equal to its mean minimal depth across maximal subtrees with lstat as the root variable.
 
 Generally, the plot contains much information and can be interpreted in many ways but always bear in mind the method used for calculating the conditional (mean_sample parameter) and unconditional (uncond_mean_sample parameter) mean minimal depth. Using the default "top_trees" penalizes interactions that occur less frequently than the most frequent one. Of course, one can switch between "all_trees", "top_trees" and "relevant_trees" for calculating the mean of both the conditional and unconditional minimal depth but each of them has its drawbacks and we favour using "top_trees" (the default). However, as plot_min_depth_interactions plots interactions by decreasing frequency the major drawback of calculating the mean only for relevant variables vanishes as interactions appearing for example only once but with conditional depth 0 will not be included in the plot anyway. Thus, we repeat the computation of means using "relevant_trees" and get the following result:
 
-# interactions_frame <- min_depth_interactions(forest, vars, mean_sample = "relevant_trees", uncond_mean_sample = "relevant_trees")
-# save(interactions_frame, file = "interactions_frame_relevant.rda")
-load("interactions_frame_relevant.rda")
+```{R}`  
+  # interactions_frame <- min_depth_interactions(forest, vars, mean_sample = "relevant_trees", uncond_mean_sample = "relevant_trees")
+  # save(interactions_frame, file = "interactions_frame_relevant.rda")
+  load("interactions_frame_relevant.rda")
 plot_min_depth_interactions(interactions_frame)
+```
 
 Comparing this plot with the previous one we see that removing penalization of missing values lowers the mean conditional minimal depth of all interactions except the most frequent one. Now, in addition to the frequent ones, some of the less frequent like rm:tax stand out.
 
-Prediction of the forest on a grid
+## Prediction of the forest on a grid
 To further investigate the most frequent interaction lstat:rm we use the function plot_predict_interaction to plot the prediction of our forest on a grid of values for the components of each interaction. The function requires the forest, training data, variable to use on x and y-axis, respectively. In addition, one can also decrease the number of points in both dimensions of the grid from the default of 100 in case of insufficient memory using the parameter grid.
 
 plot_predict_interaction(forest, Boston, "rm", "lstat")
 
 In the above plot we can clearly see the effect of interaction: the predicted median price is highest when lstat is low and rm is high and low when the reverse is true. To further investigate the effect of interactions we could plot other frequent ones on a grid.
 
-Explain the forest
+## Explain the forest
 The explain_forest() function is the flagship function of the randomForestExplainer package, as it takes your random forest and produces a html report that summarizes all basic results obtained for the forest with the new package. Below, we show how to run this function with default settings (we only supply the forest, training data, set interactions = TRUE contrary to the default to show full functionality and decrease the grid for prediction plots in our most computationally-intense examples) for our data set.
-
+```{r}`
 explain_forest(forest, interactions = TRUE, data = Boston)
+```
 To see the resulting HTML document click here: Boston forest summary
 
 For additional examples see: initial vignette.
